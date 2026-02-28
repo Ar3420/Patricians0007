@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { submitApprovalAction } from "@/app/patricians/approvals/actions";
-import { requireRole } from "@/src/lib/auth/requireAuth";
+import { getOptionalSession } from "@/src/lib/auth/requireAuth";
 import { getApprovalsData } from "@/src/lib/data/patricians";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,19 @@ export default async function ApprovalsPage({
     selected?: string;
   }>;
 }) {
-  await requireRole(["approver", "admin"]);
+  const session = await getOptionalSession();
+  const canApprove = session?.role === "approver" || session?.role === "admin";
+  if (!canApprove) {
+    return (
+      <section className="helix-panel rounded-2xl p-5">
+        <h1 className="text-3xl">Approvals Locked</h1>
+        <p className="mt-2 text-sm text-[#5c6879]">
+          Approver/Admin role is required to access this page.
+        </p>
+      </section>
+    );
+  }
+
   const filters = await searchParams;
   const data = await getApprovalsData({
     code: filters.code,

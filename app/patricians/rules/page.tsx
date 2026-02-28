@@ -1,11 +1,23 @@
 import { updateTreasuryRulesAction } from "@/app/patricians/rules/actions";
-import { requireRole } from "@/src/lib/auth/requireAuth";
+import { getOptionalSession } from "@/src/lib/auth/requireAuth";
 import { getTreasuryRules } from "@/src/lib/data/patricians";
 
 export const dynamic = "force-dynamic";
 
 export default async function RulesPage() {
-  await requireRole(["approver", "admin"]);
+  const session = await getOptionalSession();
+  const canApprove = session?.role === "approver" || session?.role === "admin";
+  if (!canApprove) {
+    return (
+      <section className="helix-panel max-w-xl rounded-2xl p-4">
+        <h1 className="text-3xl">Rules Locked</h1>
+        <p className="mt-2 text-sm text-[#5c6879]">
+          Approver/Admin role is required to update treasury rules.
+        </p>
+      </section>
+    );
+  }
+
   const rules = await getTreasuryRules();
 
   return (

@@ -1,4 +1,6 @@
-import { requireAuth } from "@/src/lib/auth/requireAuth";
+import Link from "next/link";
+
+import { getOptionalSession } from "@/src/lib/auth/requireAuth";
 import { getDashboardData } from "@/src/lib/data/patricians";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +10,11 @@ function formatMoney(value: number) {
 }
 
 export default async function PatriciansDashboardPage() {
-  const session = await requireAuth();
-  const canApprove = session.role === "approver" || session.role === "admin";
+  const session = await getOptionalSession();
+  if (!session) {
+    return null;
+  }
+  const canApprove = session?.role === "approver" || session?.role === "admin";
   const data = await getDashboardData();
 
   return (
@@ -73,8 +78,9 @@ export default async function PatriciansDashboardPage() {
         <h2 className="helix-display text-2xl font-semibold helix-title">Investor Hub</h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {data.investorCards.map((card) => (
-            <article
+            <Link
               key={card.id}
+              href={`/patricians/investors/${card.code}`}
               className="helix-panel rounded-2xl p-4 transition hover:border-[#bcc1ca]"
             >
               <div className="mb-2 flex items-center justify-between">
@@ -94,7 +100,7 @@ export default async function PatriciansDashboardPage() {
               <p className="text-sm text-[#586375]">Sleeve Value: {formatMoney(card.sleeveValue)}</p>
               <p className="text-sm text-[#586375]">Open Positions: {card.openPositionsCount}</p>
               <p className="text-sm text-[#586375]">Pending Requests: {card.pendingRequestsCount}</p>
-            </article>
+            </Link>
           ))}
         </div>
       </section>
@@ -105,7 +111,11 @@ export default async function PatriciansDashboardPage() {
             <h2 className="helix-display text-base font-semibold uppercase tracking-wide text-[#566173]">
               Pending Approval Queue
             </h2>
-            {canApprove ? <span className="text-xs text-[#4f5a6c]">Approver View</span> : null}
+            {canApprove ? (
+              <Link href="/patricians/approvals" className="text-xs text-[#4f5a6c] underline">
+                Open
+              </Link>
+            ) : null}
           </div>
           {!canApprove ? (
             <p className="text-sm text-slate-500">Approver/Admin role required.</p>

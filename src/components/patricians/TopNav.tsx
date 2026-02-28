@@ -11,14 +11,34 @@ export function TopNav({
   role: MemberRole;
   accountValue: number;
 }) {
+  const canApprove = role === "approver" || role === "admin";
+
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--helix-border)] bg-[#eeeff1]/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3">
-        <div className="flex items-center">
+        <div className="flex items-center gap-6">
           <div>
             <p className="helix-display text-xs font-semibold uppercase tracking-[0.24em] helix-accent">Helix</p>
             <p className="helix-display text-xl font-semibold helix-title">Patricians</p>
           </div>
+          <nav className="flex gap-4 text-sm text-[#4b5565]">
+            <Link href="/patricians" className="hover:text-[#1f2937]">
+              Dashboard
+            </Link>
+            <Link href="/patricians/ledger" className="hover:text-[#1f2937]">
+              Ledger
+            </Link>
+            {canApprove ? (
+              <Link href="/patricians/approvals" className="hover:text-[#1f2937]">
+                Approvals
+              </Link>
+            ) : null}
+            {canApprove ? (
+              <Link href="/patricians/rules" className="hover:text-[#1f2937]">
+                Settings
+              </Link>
+            ) : null}
+          </nav>
         </div>
         <div className="flex items-center gap-4 text-sm">
           <span className="rounded-md border border-[var(--helix-border)] bg-white/55 px-2 py-1 text-[#4b5565]">

@@ -12,6 +12,7 @@ export function TopNav({
   accountValue: number;
 }) {
   const canApprove = role === "approver" || role === "admin";
+  const serCode = `SER-${memberId.slice(-2)}`;
 
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--helix-border)] bg-[#eeeff1]/90 backdrop-blur">
@@ -22,7 +23,7 @@ export function TopNav({
             <p className="helix-display text-xl font-semibold helix-title">Patricians</p>
           </div>
           <nav className="flex gap-4 text-sm text-[#4b5565]">
-            <Link href="/patricians" className="hover:text-[#1f2937]">
+            <Link href="/" className="hover:text-[#1f2937]">
               Dashboard
             </Link>
             <Link href="/patricians/ledger" className="hover:text-[#1f2937]">
@@ -42,7 +43,10 @@ export function TopNav({
         </div>
         <div className="flex items-center gap-4 text-sm">
           <span className="rounded-md border border-[var(--helix-border)] bg-white/55 px-2 py-1 text-[#4b5565]">
-            {role.toUpperCase()} #{memberId}
+            {serCode}
+          </span>
+          <span className="rounded-md border border-[var(--helix-border)] bg-white/70 px-2 py-1 text-[#4b5565]">
+            {role.toUpperCase()}
           </span>
           <Link href="/logout" className="text-[#4b5565] hover:text-[#1f2937]">
             Logout

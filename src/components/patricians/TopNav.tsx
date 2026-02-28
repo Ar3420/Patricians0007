@@ -23,8 +23,11 @@ export function TopNav({
             <p className="helix-display text-xl font-semibold helix-title">Patricians</p>
           </div>
           <nav className="flex gap-4 text-sm text-[#4b5565]">
-            <Link href="/" className="hover:text-[#1f2937]">
+            <Link href="/patricians" className="hover:text-[#1f2937]">
               Dashboard
+            </Link>
+            <Link href="/" className="hover:text-[#1f2937]">
+              About
             </Link>
             <Link href="/patricians/ledger" className="hover:text-[#1f2937]">
               Ledger

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getOptionalSession } from "@/src/lib/auth/requireAuth";
+import { requireAuth } from "@/src/lib/auth/requireAuth";
 import { getDashboardData } from "@/src/lib/data/patricians";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +10,8 @@ function formatMoney(value: number) {
 }
 
 export default async function PatriciansDashboardPage() {
-  const session = await getOptionalSession();
-  if (!session) {
-    return null;
-  }
-  const canApprove = session?.role === "approver" || session?.role === "admin";
+  const session = await requireAuth();
+  const canApprove = session.role === "approver" || session.role === "admin";
   const data = await getDashboardData();
 
   return (

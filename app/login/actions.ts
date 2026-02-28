@@ -59,7 +59,7 @@ export async function loginAction(
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+    sameSite: "lax",
     path: "/",
     maxAge: maxAgeSeconds,
     expires: new Date(Date.now() + maxAgeSeconds * 1000),

@@ -20,13 +20,16 @@ export async function getOptionalSession(): Promise<SessionUser | null> {
   if (verified) {
     return verified;
   }
-  return decodeSessionTokenUnsafe(token);
+  if (process.env.NODE_ENV !== "production") {
+    return decodeSessionTokenUnsafe(token);
+  }
+  return null;
 }
 
 export async function requireAuth(): Promise<SessionUser> {
   const session = await getOptionalSession();
   if (!session) {
-    redirect("/patricians");
+    redirect("/login");
   }
   return session;
 }

@@ -1,13 +1,10 @@
-import { getOptionalSession } from "@/src/lib/auth/requireAuth";
+import { requireAuth } from "@/src/lib/auth/requireAuth";
 import { getLedgerData } from "@/src/lib/data/patricians";
 
 export const dynamic = "force-dynamic";
 
 export default async function LedgerPage() {
-  const session = await getOptionalSession();
-  if (!session) {
-    return null;
-  }
+  await requireAuth();
   const data = await getLedgerData();
 
   return (

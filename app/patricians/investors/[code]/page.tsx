@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { getOptionalSession } from "@/src/lib/auth/requireAuth";
+import { requireAuth } from "@/src/lib/auth/requireAuth";
 import { getInvestorDetail } from "@/src/lib/data/patricians";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +14,7 @@ export default async function InvestorDetailPage({
 }: {
   params: Promise<{ code: string }>;
 }) {
-  const session = await getOptionalSession();
-  if (!session) {
-    return null;
-  }
+  await requireAuth();
   const resolved = await params;
   const detail = await getInvestorDetail(resolved.code);
   if (!detail) {

@@ -51,9 +51,11 @@ export function TopNav({
           <span className="rounded-md border border-[var(--helix-border)] bg-white/70 px-2 py-1 text-[#4b5565]">
             {role.toUpperCase()}
           </span>
-          <Link href="/logout" className="text-[#4b5565] hover:text-[#1f2937]">
-            Logout
-          </Link>
+          <form action="/logout" method="post">
+            <button type="submit" className="cursor-pointer text-[#4b5565] hover:text-[#1f2937]">
+              Logout
+            </button>
+          </form>
           <div className="rounded-md border border-[var(--helix-border)] bg-white/90 px-3 py-1 font-medium text-[#293041]">
             ${accountValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>

@@ -18,11 +18,16 @@ const approvalSchema = z.object({
 export async function submitApprovalAction(formData: FormData) {
   const session = await requireRole(["approver", "admin"]);
 
+  const rawRequestId = formData.get("request_id");
+  const rawDecision = formData.get("decision");
+  const rawEditedTargetPct = formData.get("edited_target_pct");
+  const rawNotes = formData.get("notes");
+
   const parsed = approvalSchema.safeParse({
-    requestId: formData.get("request_id"),
-    decision: formData.get("decision"),
-    editedTargetPct: formData.get("edited_target_pct"),
-    notes: formData.get("notes"),
+    requestId: rawRequestId == null ? undefined : String(rawRequestId),
+    decision: rawDecision == null ? undefined : String(rawDecision),
+    editedTargetPct: rawEditedTargetPct == null ? undefined : String(rawEditedTargetPct),
+    notes: rawNotes == null ? undefined : String(rawNotes),
   });
   if (!parsed.success) {
     throw new Error("Invalid approval payload.");

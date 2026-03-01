@@ -42,8 +42,18 @@ export async function submitApprovalAction(formData: FormData) {
     .eq("id", requestId)
     .maybeSingle();
 
-  if (!request || request.state !== "pending") {
-    throw new Error("Request is no longer pending.");
+  if (!request) {
+    revalidatePath("/patricians");
+    revalidatePath("/patricians/approvals");
+    return;
+  }
+  if (request.state !== "pending") {
+    // Idempotent: request was already processed in another submission/tab.
+    revalidatePath("/patricians");
+    revalidatePath("/patricians/approvals");
+    revalidatePath("/patricians/ledger");
+    revalidatePath("/patricians/simulation");
+    return;
   }
   if (decision === "approved_edited" && (editedTargetPct === null || editedTargetPct < 0)) {
     throw new Error("Edited target percent is required for edited approval.");
@@ -57,7 +67,10 @@ export async function submitApprovalAction(formData: FormData) {
     notes: (parsed.data.notes ?? "").trim() || null,
   };
   const { error: approvalError } = await supabase.from("approvals").insert(approvalPayload);
-  if (approvalError) {
+  const isDuplicateApproval =
+    approvalError?.code === "23505" ||
+    approvalError?.message.toLowerCase().includes("duplicate key");
+  if (approvalError && !isDuplicateApproval) {
     throw new Error(approvalError.message);
   }
 
@@ -86,25 +99,30 @@ export async function submitApprovalAction(formData: FormData) {
       .in("status", ["pending", "running"])
       .limit(1);
 
-    if (existingJobsError) {
-      throw new Error(existingJobsError.message);
-    }
-
-    if ((existingJobs ?? []).length === 0) {
-      const { error: enqueueError } = await supabase.from("engine_jobs").insert({
-        requested_by_member_id: session.memberId,
-        target_member_id: session.memberId,
-        stage: "execute",
-        run_date: runDate,
-        status: "pending",
-        meta: {
-          source: "approval-auto-execute",
-          request_id: requestId,
-        },
-      });
-      if (enqueueError) {
-        throw new Error(enqueueError.message);
+    try {
+      if (existingJobsError) {
+        throw new Error(existingJobsError.message);
       }
+
+      if ((existingJobs ?? []).length === 0) {
+        const { error: enqueueError } = await supabase.from("engine_jobs").insert({
+          requested_by_member_id: session.memberId,
+          target_member_id: session.memberId,
+          stage: "execute",
+          run_date: runDate,
+          status: "pending",
+          meta: {
+            source: "approval-auto-execute",
+            request_id: requestId,
+          },
+        });
+        if (enqueueError) {
+          throw new Error(enqueueError.message);
+        }
+      }
+    } catch (queueError) {
+      // Keep approval UX stable even if queue schema/migration differs in this environment.
+      console.error("Auto-queue execute job failed:", queueError);
     }
   }
 

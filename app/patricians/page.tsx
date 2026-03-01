@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import { EngineControlPanel } from "@/src/components/patricians/EngineControlPanel";
 import { requireAuth } from "@/src/lib/auth/requireAuth";
 import { getDashboardData } from "@/src/lib/data/patricians";
+import { engineControlAvailability } from "@/src/lib/engine/runner";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,8 @@ export default async function PatriciansDashboardPage() {
   const session = await requireAuth();
   const canApprove = session.role === "approver" || session.role === "admin";
   const data = await getDashboardData();
+  const runDate = new Date().toISOString().slice(0, 10);
+  const engineControl = engineControlAvailability();
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.1fr_2fr_1.4fr]">
@@ -72,6 +76,9 @@ export default async function PatriciansDashboardPage() {
       </aside>
 
       <section className="space-y-3">
+        {canApprove ? (
+          <EngineControlPanel defaultRunDate={runDate} canRun={engineControl.enabled} />
+        ) : null}
         <h2 className="helix-display text-2xl font-semibold helix-title">Investor Hub</h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {data.investorCards.map((card) => (

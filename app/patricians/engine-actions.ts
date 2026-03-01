@@ -9,20 +9,7 @@ import {
   type EngineStage,
   runEngine,
 } from "@/src/lib/engine/runner";
-
-export interface EngineControlState {
-  ok: boolean;
-  message: string;
-  output: string;
-  predictions: string[];
-}
-
-export const INITIAL_ENGINE_STATE: EngineControlState = {
-  ok: true,
-  message: "Ready.",
-  output: "",
-  predictions: [],
-};
+import type { EngineControlState } from "@/src/lib/engine/types";
 
 function validDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);

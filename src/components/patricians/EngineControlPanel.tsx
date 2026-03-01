@@ -2,11 +2,15 @@
 
 import { useActionState } from "react";
 
-import {
-  INITIAL_ENGINE_STATE,
-  runEngineControlAction,
-  type EngineControlState,
-} from "@/app/patricians/engine-actions";
+import { runEngineControlAction } from "@/app/patricians/engine-actions";
+import type { EngineControlState } from "@/src/lib/engine/types";
+
+const INITIAL_ENGINE_STATE: EngineControlState = {
+  ok: true,
+  message: "Ready.",
+  output: "",
+  predictions: [],
+};
 
 export function EngineControlPanel({
   defaultRunDate,

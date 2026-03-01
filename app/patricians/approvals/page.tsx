@@ -39,6 +39,9 @@ export default async function ApprovalsPage({
     <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
       <section className="helix-panel rounded-2xl p-4">
         <h1 className="mb-3 text-3xl">Pending Approval Queue</h1>
+        <p className="mb-3 text-xs text-[#6a7486]">
+          Approved requests auto-queue simulation execution for this run date when worker mode is `queue`.
+        </p>
         <form method="get" className="mb-4 grid gap-2 md:grid-cols-3">
           <select
             name="code"

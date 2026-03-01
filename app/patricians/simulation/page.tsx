@@ -21,8 +21,8 @@ export default async function SimulationPage() {
       <section className="helix-panel rounded-2xl p-4">
         <h1 className="mb-1 text-3xl">Simulation Exchange</h1>
         <p className="text-sm text-[#5f6b7d]">
-          Manual simulation board for tracking Alpha/Beta/Gamma sleeve equity over time using real
-          market context.
+          Tracks Alpha/Beta/Gamma sleeve equity over time using real market context. Entries are
+          auto-updated after execution, with manual override available.
         </p>
       </section>
 
@@ -81,4 +81,3 @@ export default async function SimulationPage() {
     </div>
   );
 }
-

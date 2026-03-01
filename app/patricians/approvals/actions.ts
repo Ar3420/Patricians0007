@@ -38,7 +38,7 @@ export async function submitApprovalAction(formData: FormData) {
   const supabase = getSupabaseAdmin();
   const { data: request } = await supabase
     .from("requests")
-    .select("id,state,target_pct")
+    .select("id,state,target_pct,run_date")
     .eq("id", requestId)
     .maybeSingle();
 
@@ -76,7 +76,40 @@ export async function submitApprovalAction(formData: FormData) {
     throw new Error(requestError.message);
   }
 
+  if (decision !== "rejected") {
+    const runDate = String(request.run_date ?? "");
+    const { data: existingJobs, error: existingJobsError } = await supabase
+      .from("engine_jobs")
+      .select("id")
+      .eq("stage", "execute")
+      .eq("run_date", runDate)
+      .in("status", ["pending", "running"])
+      .limit(1);
+
+    if (existingJobsError) {
+      throw new Error(existingJobsError.message);
+    }
+
+    if ((existingJobs ?? []).length === 0) {
+      const { error: enqueueError } = await supabase.from("engine_jobs").insert({
+        requested_by_member_id: session.memberId,
+        target_member_id: session.memberId,
+        stage: "execute",
+        run_date: runDate,
+        status: "pending",
+        meta: {
+          source: "approval-auto-execute",
+          request_id: requestId,
+        },
+      });
+      if (enqueueError) {
+        throw new Error(enqueueError.message);
+      }
+    }
+  }
+
   revalidatePath("/patricians");
   revalidatePath("/patricians/approvals");
   revalidatePath("/patricians/ledger");
+  revalidatePath("/patricians/simulation");
 }

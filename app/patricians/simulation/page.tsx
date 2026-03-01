@@ -1,5 +1,6 @@
 import { SimulationChart } from "@/src/components/patricians/SimulationChart";
 import { SimulationInputForm } from "@/src/components/patricians/SimulationInputForm";
+import { ReplayTrainingPanel } from "@/src/components/patricians/ReplayTrainingPanel";
 import { requireAuth } from "@/src/lib/auth/requireAuth";
 import { getSimulationData } from "@/src/lib/data/patricians";
 
@@ -10,7 +11,8 @@ function formatMoney(value: number): string {
 }
 
 export default async function SimulationPage() {
-  await requireAuth();
+  const session = await requireAuth();
+  const canControlReplay = session.role === "approver" || session.role === "admin";
   const data = await getSimulationData();
 
   const today = new Date().toISOString().slice(0, 10);
@@ -69,6 +71,17 @@ export default async function SimulationPage() {
       </div>
 
       <SimulationChart points={data.chartPoints} />
+
+      {canControlReplay ? (
+        <ReplayTrainingPanel
+          defaultStartDate={today}
+          defaultEndDate={today}
+          defaultAlpha={data.liveSuggestion.alpha}
+          defaultBeta={data.liveSuggestion.beta}
+          defaultGamma={data.liveSuggestion.gamma}
+          replayStatus={data.replayStatus}
+        />
+      ) : null}
 
       {data.tableReady ? (
         <SimulationInputForm

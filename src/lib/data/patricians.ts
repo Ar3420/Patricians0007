@@ -475,7 +475,7 @@ export async function getLedgerData() {
 export async function getSimulationData() {
   const supabase = getSupabaseAdmin();
 
-  const [snapshotsRes, investorsRes, positionsRes] = await Promise.all([
+  const [snapshotsRes, investorsRes, positionsRes, replayRes] = await Promise.all([
     supabase
       .from("simulation_snapshots")
       .select("*")
@@ -483,6 +483,7 @@ export async function getSimulationData() {
       .limit(600),
     supabase.from("investors").select("id,code"),
     supabase.from("positions").select("investor_id,symbol,qty,avg_price"),
+    supabase.from("simulation_replays").select("*").order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const tableReady = !snapshotsRes.error;
@@ -543,6 +544,21 @@ export async function getSimulationData() {
 
   const latest = chartPoints[chartPoints.length - 1] ?? null;
 
+  const replayStatus = replayRes.error
+    ? null
+    : replayRes.data
+      ? {
+          id: asText(replayRes.data.id),
+          status: asText(replayRes.data.status),
+          startDate: asText(replayRes.data.start_date),
+          endDate: asText(replayRes.data.end_date),
+          currentDate: asText(replayRes.data.current_date),
+          lastMessage: asText(replayRes.data.last_message),
+          errorText: asText(replayRes.data.error_text),
+          updatedAt: asText(replayRes.data.updated_at),
+        }
+      : null;
+
   return {
     tableReady,
     tableError,
@@ -554,6 +570,7 @@ export async function getSimulationData() {
       gamma: liveByCode.gamma,
       total: liveTotal,
     },
+    replayStatus,
   };
 }
 

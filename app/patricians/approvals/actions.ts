@@ -9,13 +9,23 @@ import { getSupabaseAdmin } from "@/src/lib/db/supabaseAdmin";
 const approvalSchema = z.object({
   requestId: z.string().uuid(),
   decision: z.enum(["approved", "approved_edited", "rejected"]),
-  editedTargetPct: z
-    .union([z.string().trim().length(0), z.string().trim().regex(/^\d+(\.\d+)?$/)])
-    .optional(),
+  editedTargetPct: z.string().optional(),
   notes: z.string().optional(),
 });
 
 export async function submitApprovalAction(formData: FormData) {
+  const revalidateAll = () => {
+    revalidatePath("/patricians");
+    revalidatePath("/patricians/approvals");
+    revalidatePath("/patricians/ledger");
+    revalidatePath("/patricians/simulation");
+  };
+  const fail = (message: string, details?: unknown) => {
+    console.error("submitApprovalAction:", message, details ?? "");
+    revalidateAll();
+    return;
+  };
+
   const session = await requireRole(["approver", "admin"]);
 
   const rawRequestId = formData.get("request_id");
@@ -26,19 +36,17 @@ export async function submitApprovalAction(formData: FormData) {
   const parsed = approvalSchema.safeParse({
     requestId: rawRequestId == null ? undefined : String(rawRequestId),
     decision: rawDecision == null ? undefined : String(rawDecision),
-    editedTargetPct: rawEditedTargetPct == null ? undefined : String(rawEditedTargetPct),
+    editedTargetPct: rawEditedTargetPct == null ? undefined : String(rawEditedTargetPct).trim(),
     notes: rawNotes == null ? undefined : String(rawNotes),
   });
   if (!parsed.success) {
-    throw new Error("Invalid approval payload.");
+    return fail("Invalid approval payload.", parsed.error.flatten());
   }
 
   const requestId = parsed.data.requestId;
   const decision = parsed.data.decision;
-  const editedTargetPct =
-    parsed.data.editedTargetPct && parsed.data.editedTargetPct.length > 0
-      ? Number(parsed.data.editedTargetPct)
-      : null;
+  const editedTargetPctRaw = parsed.data.editedTargetPct ?? "";
+  const editedTargetPct = editedTargetPctRaw.length > 0 ? Number(editedTargetPctRaw) : null;
 
   const supabase = getSupabaseAdmin();
   const { data: request } = await supabase
@@ -48,20 +56,19 @@ export async function submitApprovalAction(formData: FormData) {
     .maybeSingle();
 
   if (!request) {
-    revalidatePath("/patricians");
-    revalidatePath("/patricians/approvals");
+    revalidateAll();
     return;
   }
   if (request.state !== "pending") {
     // Idempotent: request was already processed in another submission/tab.
-    revalidatePath("/patricians");
-    revalidatePath("/patricians/approvals");
-    revalidatePath("/patricians/ledger");
-    revalidatePath("/patricians/simulation");
+    revalidateAll();
     return;
   }
-  if (decision === "approved_edited" && (editedTargetPct === null || editedTargetPct < 0)) {
-    throw new Error("Edited target percent is required for edited approval.");
+  if (
+    decision === "approved_edited" &&
+    (editedTargetPct === null || !Number.isFinite(editedTargetPct) || editedTargetPct < 0 || editedTargetPct > 100)
+  ) {
+    return fail("Invalid edited target percent. Must be between 0 and 100.");
   }
 
   const approvalPayload = {
@@ -76,7 +83,7 @@ export async function submitApprovalAction(formData: FormData) {
     approvalError?.code === "23505" ||
     approvalError?.message.toLowerCase().includes("duplicate key");
   if (approvalError && !isDuplicateApproval) {
-    throw new Error(approvalError.message);
+    return fail("Approval insert failed", approvalError.message);
   }
 
   const requestUpdate: Record<string, unknown> = {
@@ -91,7 +98,7 @@ export async function submitApprovalAction(formData: FormData) {
     .eq("id", requestId)
     .eq("state", "pending");
   if (requestError) {
-    throw new Error(requestError.message);
+    return fail("Request update failed", requestError.message);
   }
 
   if (decision !== "rejected") {
@@ -131,8 +138,5 @@ export async function submitApprovalAction(formData: FormData) {
     }
   }
 
-  revalidatePath("/patricians");
-  revalidatePath("/patricians/approvals");
-  revalidatePath("/patricians/ledger");
-  revalidatePath("/patricians/simulation");
+  revalidateAll();
 }

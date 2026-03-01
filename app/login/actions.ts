@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getSupabaseAdmin } from "@/src/lib/db/supabaseAdmin";
@@ -54,11 +55,13 @@ export async function loginAction(
         : (member.role as "viewer" | "approver" | "admin"),
   });
   const cookieStore = await cookies();
-  const isProduction = process.env.NODE_ENV === "production";
+  const headerStore = await headers();
+  const forwardedProto = headerStore.get("x-forwarded-proto");
+  const isHttps = forwardedProto === "https";
   const maxAgeSeconds = 60 * 60 * 24 * 7;
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: isProduction,
+    secure: isHttps,
     sameSite: "lax",
     path: "/",
     maxAge: maxAgeSeconds,

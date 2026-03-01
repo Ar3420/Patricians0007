@@ -77,7 +77,11 @@ export default async function PatriciansDashboardPage() {
 
       <section className="space-y-3">
         {canApprove ? (
-          <EngineControlPanel defaultRunDate={runDate} canRun={engineControl.enabled} />
+          <EngineControlPanel
+            defaultRunDate={runDate}
+            canRun={engineControl.enabled}
+            mode={engineControl.mode}
+          />
         ) : null}
         <h2 className="helix-display text-2xl font-semibold helix-title">Investor Hub</h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

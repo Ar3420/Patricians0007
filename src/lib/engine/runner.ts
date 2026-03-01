@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 export type EngineStage = "ingest" | "propose" | "execute" | "train" | "full_cycle";
+export type EngineControlMode = "local" | "queue";
 
 export interface EngineRunResult {
   ok: boolean;
@@ -24,13 +25,34 @@ function enginePath(): string {
   return path.resolve(process.cwd(), "..", "engine");
 }
 
-export function engineControlAvailability(): { enabled: boolean; reason?: string; path: string } {
+export function engineControlMode(): EngineControlMode {
+  const raw = process.env.ENGINE_CONTROL_MODE?.trim().toLowerCase();
+  return raw === "local" ? "local" : "queue";
+}
+
+export function engineControlAvailability(): {
+  enabled: boolean;
+  reason?: string;
+  path: string;
+  mode: EngineControlMode;
+} {
+  const mode = engineControlMode();
+  if (mode === "queue") {
+    return {
+      enabled: true,
+      reason: "Jobs are queued in Supabase and executed by worker devices.",
+      path: "",
+      mode,
+    };
+  }
+
   const resolved = enginePath();
   if (!existsSync(resolved)) {
     return {
       enabled: false,
       reason: `Engine folder not found: ${resolved}`,
       path: resolved,
+      mode,
     };
   }
   if (process.env.ENGINE_CONTROL_ENABLED !== "true") {
@@ -38,9 +60,10 @@ export function engineControlAvailability(): { enabled: boolean; reason?: string
       enabled: false,
       reason: "Set ENGINE_CONTROL_ENABLED=true to allow web-triggered agent runs.",
       path: resolved,
+      mode,
     };
   }
-  return { enabled: true, path: resolved };
+  return { enabled: true, path: resolved, mode };
 }
 
 function runPython(args: string[], cwd: string): Promise<{ ok: boolean; output: string; error?: string }> {
@@ -118,6 +141,15 @@ export async function runEngine(stage: EngineStage, runDate: string): Promise<En
       durationMs: 0,
       output: "",
       error: availability.reason ?? "Engine control disabled.",
+    };
+  }
+  if (availability.mode !== "local") {
+    return {
+      ok: false,
+      stage,
+      durationMs: 0,
+      output: "",
+      error: "Local run disabled in queue mode.",
     };
   }
 

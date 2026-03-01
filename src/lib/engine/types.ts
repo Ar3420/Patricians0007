@@ -3,4 +3,6 @@ export interface EngineControlState {
   message: string;
   output: string;
   predictions: string[];
+  mode: "queue" | "local";
+  jobs: string[];
 }

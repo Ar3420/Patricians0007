@@ -10,14 +10,18 @@ const INITIAL_ENGINE_STATE: EngineControlState = {
   message: "Ready.",
   output: "",
   predictions: [],
+  mode: "queue",
+  jobs: [],
 };
 
 export function EngineControlPanel({
   defaultRunDate,
   canRun,
+  mode,
 }: {
   defaultRunDate: string;
   canRun: boolean;
+  mode: "queue" | "local";
 }) {
   const [state, formAction, pending] = useActionState<EngineControlState, FormData>(
     runEngineControlAction,
@@ -30,6 +34,12 @@ export function EngineControlPanel({
       <p className="mt-1 text-sm text-[#5b6779]">
         Run Alpha/Beta/Gamma pipeline from UI: ingest market data, propose predictions, train models,
         and execute approved requests.
+      </p>
+      <p className="mt-1 text-xs text-[#6a7486]">
+        Mode: <strong>{mode.toUpperCase()}</strong>{" "}
+        {mode === "queue"
+          ? "(jobs queued for local worker devices)"
+          : "(runs directly on this server runtime)"}
       </p>
 
       <form action={formAction} className="mt-3 space-y-3">
@@ -95,7 +105,7 @@ export function EngineControlPanel({
 
       {!canRun ? (
         <p className="mt-2 text-xs text-amber-700">
-          Engine controls are disabled. Set `ENGINE_CONTROL_ENABLED=true` and configure engine path.
+          Engine controls are disabled in local mode. Set `ENGINE_CONTROL_ENABLED=true` and configure engine path.
         </p>
       ) : null}
 
@@ -107,6 +117,13 @@ export function EngineControlPanel({
           <ul className="mt-2 space-y-1 text-xs text-[#4e5a6c]">
             {state.predictions.map((line) => (
               <li key={line}>- {line}</li>
+            ))}
+          </ul>
+        ) : null}
+        {state.jobs.length > 0 ? (
+          <ul className="mt-2 space-y-1 text-xs text-[#4e5a6c]">
+            {state.jobs.map((job) => (
+              <li key={job}>* {job}</li>
             ))}
           </ul>
         ) : null}

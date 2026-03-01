@@ -6,6 +6,7 @@ import { requireRole } from "@/src/lib/auth/requireAuth";
 import { getSupabaseAdmin } from "@/src/lib/db/supabaseAdmin";
 import {
   engineControlAvailability,
+  engineControlMode,
   type EngineStage,
   runEngine,
 } from "@/src/lib/engine/runner";
@@ -52,20 +53,77 @@ async function predictionPreview(runDate: string): Promise<string[]> {
   });
 }
 
+async function latestJobs(memberId: string): Promise<string[]> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("engine_jobs")
+    .select("id,stage,status,run_date,requested_at,claimed_by_device,error_text")
+    .eq("requested_by_member_id", memberId)
+    .order("requested_at", { ascending: false })
+    .limit(8);
+
+  return (data ?? []).map((row) => {
+    const stage = String(row.stage).toUpperCase();
+    const status = String(row.status).toUpperCase();
+    const date = String(row.run_date);
+    const device = row.claimed_by_device ? ` on ${String(row.claimed_by_device)}` : "";
+    const err = row.error_text ? ` | ${String(row.error_text).slice(0, 120)}` : "";
+    return `${date} ${stage} -> ${status}${device}${err}`;
+  });
+}
+
 export async function runEngineControlAction(
   _prev: EngineControlState,
   formData: FormData,
 ): Promise<EngineControlState> {
-  await requireRole(["approver", "admin"]);
+  const session = await requireRole(["approver", "admin"]);
 
   const stage = coerceStage(String(formData.get("stage") ?? "full_cycle"));
   const runDate = String(formData.get("run_date") ?? "").trim();
+  const mode = engineControlMode();
   if (!validDate(runDate)) {
     return {
       ok: false,
       message: "Run date must be YYYY-MM-DD.",
       output: "",
       predictions: [],
+      mode,
+      jobs: [],
+    };
+  }
+
+  if (mode === "queue") {
+    const supabase = getSupabaseAdmin();
+    const payload = {
+      requested_by_member_id: session.memberId,
+      target_member_id: session.memberId,
+      stage,
+      run_date: runDate,
+      status: "pending",
+      meta: {
+        source: "web-ui",
+      },
+    };
+    const { error } = await supabase.from("engine_jobs").insert(payload);
+    if (error) {
+      return {
+        ok: false,
+        message: `Queue insert failed: ${error.message}`,
+        output: "",
+        predictions: [],
+        mode,
+        jobs: await latestJobs(session.memberId),
+      };
+    }
+    revalidatePath("/patricians");
+
+    return {
+      ok: true,
+      message: `Job queued: ${stage} for ${runDate}. A local worker signed in as SER-${session.memberId.slice(-2)} can execute it.`,
+      output: "",
+      predictions: [],
+      mode,
+      jobs: await latestJobs(session.memberId),
     };
   }
 
@@ -76,6 +134,8 @@ export async function runEngineControlAction(
       message: availability.reason ?? "Engine controls unavailable.",
       output: `Engine path: ${availability.path}`,
       predictions: [],
+      mode,
+      jobs: await latestJobs(session.memberId),
     };
   }
 
@@ -95,5 +155,7 @@ export async function runEngineControlAction(
       : `Stage ${stage} failed: ${result.error ?? "unknown error"}`,
     output: result.output,
     predictions,
+    mode,
+    jobs: await latestJobs(session.memberId),
   };
 }

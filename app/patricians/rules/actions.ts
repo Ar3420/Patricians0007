@@ -5,6 +5,8 @@ import { z } from "zod";
 
 import { requireRole } from "@/src/lib/auth/requireAuth";
 import { getSupabaseAdmin } from "@/src/lib/db/supabaseAdmin";
+import { startWorkerDetached } from "@/src/lib/engine/runner";
+import type { WorkerStartState } from "@/src/lib/engine/types";
 
 const rulesSchema = z.object({
   profitSiphonPct: z.number().min(0).max(1),
@@ -38,4 +40,17 @@ export async function updateTreasuryRulesAction(formData: FormData) {
 
   revalidatePath("/patricians/rules");
   revalidatePath("/patricians");
+}
+
+export async function startWorkerFromSettingsAction(
+  prev: WorkerStartState,
+  formData: FormData,
+): Promise<WorkerStartState> {
+  void prev;
+  void formData;
+  await requireRole(["approver", "admin"]);
+  const result = startWorkerDetached();
+  revalidatePath("/patricians");
+  revalidatePath("/patricians/rules");
+  return result;
 }

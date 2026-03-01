@@ -15,6 +15,11 @@ export interface EngineRunResult {
   error?: string;
 }
 
+export interface WorkerStartResult {
+  ok: boolean;
+  message: string;
+}
+
 const RUN_TIMEOUT_MS = 15 * 60 * 1000;
 
 function enginePath(): string {
@@ -118,6 +123,51 @@ function runPython(args: string[], cwd: string): Promise<{ ok: boolean; output: 
       });
     });
   });
+}
+
+export function startWorkerDetached(): WorkerStartResult {
+  if (process.env.WORKER_AUTOSTART_ENABLED !== "true") {
+    return {
+      ok: false,
+      message: "Set WORKER_AUTOSTART_ENABLED=true to allow starting worker from Settings.",
+    };
+  }
+  if (process.env.VERCEL === "1") {
+    return {
+      ok: false,
+      message: "Worker autostart is not supported on Vercel serverless runtime.",
+    };
+  }
+
+  const resolved = enginePath();
+  if (!existsSync(resolved)) {
+    return {
+      ok: false,
+      message: `Engine folder not found: ${resolved}`,
+    };
+  }
+
+  const python = process.env.PYTHON_EXECUTABLE?.trim() || "python";
+  try {
+    const child = spawn(python, ["-m", "src.ops.run_worker"], {
+      cwd: resolved,
+      env: process.env,
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    child.unref();
+    return {
+      ok: true,
+      message: `Worker started in background (pid ${child.pid ?? "n/a"}).`,
+    };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "unknown error";
+    return {
+      ok: false,
+      message: `Failed to start worker: ${msg}`,
+    };
+  }
 }
 
 async function runSingleStage(stage: Exclude<EngineStage, "full_cycle">, runDate: string, cwd: string) {

@@ -1,5 +1,6 @@
 import { updateTreasuryRulesAction } from "@/app/patricians/rules/actions";
 import { getOptionalSession } from "@/src/lib/auth/requireAuth";
+import { WorkerStartPanel } from "@/src/components/patricians/WorkerStartPanel";
 import { getTreasuryRules } from "@/src/lib/data/patricians";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +23,11 @@ export default async function RulesPage() {
 
   return (
     <section className="helix-panel max-w-xl rounded-2xl p-4">
-      <h1 className="mb-2 text-3xl">Treasury Rules</h1>
-      <p className="mb-4 text-sm text-[#566173]">
-        Profit siphon and reinvest settings are tracked in simulation only for v0.
-      </p>
+      <h1 className="mb-2 text-3xl">Settings</h1>
+      <p className="mb-4 text-sm text-[#566173]">Configure treasury behavior and local engine controls.</p>
+
+      <h2 className="mb-2 text-xl">Treasury Rules</h2>
+      <p className="mb-4 text-sm text-[#566173]">Profit siphon and reinvest settings are tracked in simulation only for v0.</p>
 
       <form action={updateTreasuryRulesAction} className="space-y-3">
         <label className="block text-sm font-semibold text-[#495467]">
@@ -64,6 +66,8 @@ export default async function RulesPage() {
       <p className="mt-4 text-xs text-[#6b7584]">
         Last updated: {rules.updatedAt ? new Date(rules.updatedAt).toLocaleString() : "never"}
       </p>
+
+      <WorkerStartPanel />
     </section>
   );
 }

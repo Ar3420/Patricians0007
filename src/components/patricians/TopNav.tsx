@@ -32,6 +32,9 @@ export function TopNav({
             <Link href="/patricians/ledger" className="hover:text-[#1f2937]">
               Ledger
             </Link>
+            <Link href="/patricians/simulation" className="hover:text-[#1f2937]">
+              Simulation
+            </Link>
             {canApprove ? (
               <Link href="/patricians/approvals" className="hover:text-[#1f2937]">
                 Approvals

@@ -472,6 +472,91 @@ export async function getLedgerData() {
   return { events };
 }
 
+export async function getSimulationData() {
+  const supabase = getSupabaseAdmin();
+
+  const [snapshotsRes, investorsRes, positionsRes] = await Promise.all([
+    supabase
+      .from("simulation_snapshots")
+      .select("*")
+      .order("as_of_date", { ascending: true })
+      .limit(600),
+    supabase.from("investors").select("id,code"),
+    supabase.from("positions").select("investor_id,symbol,qty,avg_price"),
+  ]);
+
+  const tableReady = !snapshotsRes.error;
+  const tableError = snapshotsRes.error?.message ?? "";
+  const rawSnapshots = snapshotsRes.data ?? [];
+
+  const investorCodeById = new Map<string, string>();
+  for (const row of investorsRes.data ?? []) {
+    investorCodeById.set(asText(row.id), asText(row.code));
+  }
+
+  const positions = positionsRes.data ?? [];
+  const symbols = Array.from(new Set(positions.map((p) => asText(p.symbol)).filter(Boolean)));
+  const latestCloseMap = await getLatestCloseMap(symbols);
+
+  const liveByCode: Record<InvestorCode, number> = {
+    alpha: 0,
+    beta: 0,
+    gamma: 0,
+  };
+
+  for (const position of positions) {
+    const code = investorCodeById.get(asText(position.investor_id));
+    if (code !== "alpha" && code !== "beta" && code !== "gamma") {
+      continue;
+    }
+    const symbol = asText(position.symbol);
+    const qty = asNumber(position.qty);
+    const px = latestCloseMap[symbol] ?? asNumber(position.avg_price);
+    liveByCode[code] += Math.max(qty, 0) * Math.max(px, 0);
+  }
+
+  const liveTotal = liveByCode.alpha + liveByCode.beta + liveByCode.gamma;
+
+  const points = rawSnapshots.map((row) => ({
+    id: asText(row.id),
+    date: asText(row.as_of_date),
+    alpha: asNumber(row.alpha_value),
+    beta: asNumber(row.beta_value),
+    gamma: asNumber(row.gamma_value),
+    total: asNumber(row.total_value),
+    benchmarkSymbol: asText(row.benchmark_symbol, "SPY"),
+    benchmarkClose: asNumber(row.benchmark_close, 0),
+    notes: asText(row.notes),
+    createdAt: asText(row.created_at),
+  }));
+
+  const totalBase = points.find((p) => p.total > 0)?.total ?? 0;
+  const benchmarkBase = points.find((p) => p.benchmarkClose > 0)?.benchmarkClose ?? 0;
+
+  const chartPoints = points.map((p) => ({
+    ...p,
+    benchmarkValue:
+      totalBase > 0 && benchmarkBase > 0 && p.benchmarkClose > 0
+        ? (p.benchmarkClose / benchmarkBase) * totalBase
+        : 0,
+  }));
+
+  const latest = chartPoints[chartPoints.length - 1] ?? null;
+
+  return {
+    tableReady,
+    tableError,
+    chartPoints,
+    latest,
+    liveSuggestion: {
+      alpha: liveByCode.alpha,
+      beta: liveByCode.beta,
+      gamma: liveByCode.gamma,
+      total: liveTotal,
+    },
+  };
+}
+
 export async function getTreasuryRules() {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase.from("treasury_rules").select("*").limit(1).maybeSingle();

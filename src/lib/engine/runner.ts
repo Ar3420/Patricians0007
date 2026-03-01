@@ -126,16 +126,16 @@ function runPython(args: string[], cwd: string): Promise<{ ok: boolean; output: 
 }
 
 export function startWorkerDetached(): WorkerStartResult {
-  if (process.env.WORKER_AUTOSTART_ENABLED !== "true") {
-    return {
-      ok: false,
-      message: "Set WORKER_AUTOSTART_ENABLED=true to allow starting worker from Settings.",
-    };
-  }
   if (process.env.VERCEL === "1") {
     return {
       ok: false,
       message: "Worker autostart is not supported on Vercel serverless runtime.",
+    };
+  }
+  if (process.env.WORKER_AUTOSTART_ENABLED !== "true") {
+    return {
+      ok: false,
+      message: "Set WORKER_AUTOSTART_ENABLED=true to allow starting worker from Settings.",
     };
   }
 
